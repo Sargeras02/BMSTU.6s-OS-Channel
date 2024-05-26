@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using WebApi_KR.Utils;
 
 namespace WebApi_KR.Helpers
 {
@@ -56,7 +57,12 @@ namespace WebApi_KR.Helpers
             if (Random.Shared.Next(100) < CorruptionChance)
             {
                 var temp = string.Empty;
-                var randBit = Random.Shared.Next(segment.Length);
+
+                var nr = new NormalRandom();
+                var randBit = nr.NextDouble() * 20 + 200; // Random.Shared.Next(segment.Length);
+                if (randBit > segment.Length - 1)
+                    randBit = segment.Length - 1;
+
                 for (int i = 0; i < segment.Length; i++)
                     temp += i == randBit ? Invert(segment[i]) : segment[i];
                 corrupted = temp;
