@@ -33,5 +33,17 @@
 
         public static List<string> ErrorBySyndrome(string syndrome) => Syndromes[syndrome];
 
+        public static void PrintHealMeta()
+        {
+            Console.WriteLine($"Using Generative: {CycleEncoder.GenerativePoly} ({CycleEncoder.GenerativeBits}).");
+            Console.WriteLine($"Total Syndromes: {Syndromes.Count}.");
+            Console.WriteLine($"One-To-One Syndromes: {Syndromes.Where(x => x.Value.Count == 1).Count()}");
+            Console.WriteLine($"One-To-Many Syndromes: {Syndromes.Where(x => x.Value.Count > 1).Count()}");
+
+            foreach (var syn in Syndromes)
+            {
+                Console.WriteLine($"{syn.Key} => [ {string.Join(", ", syn.Value)} ]");
+            }
+        }
     }
 }

@@ -27,19 +27,37 @@ namespace WebApi_KR.Controllers
         [Route("Code")]
         public async Task<IActionResult> Code([FromBody] SegmentDto segment)
         {
+            await Console.Out.WriteLineAsync($"Received sequence.");
+
             if (segment.Segment.Length > MaxSegmentByteSize * BitsInByte)
+            {
+                await Console.Out.WriteLineAsync("Error: Segment Overflow");
                 return BadRequest(new { Error = "Segment size overflow." });
+            }
 
             foreach (var bit in segment.Segment)
+            {
                 if (!ValidBits.Contains(bit))
+                {
+                    await Console.Out.WriteLineAsync("Error: Invalid Sequence");
                     return BadRequest(new { Error = "Invalid byte sequence." });
+                }
+            }
+            
+            await Console.Out.WriteLineAsync($"Sequence length: {segment.Segment.Length} bits");
 
             try
             {
                 var coded = CycleEncoder.Encode(segment.Segment);
+                await Console.Out.WriteLineAsync($"> Encode Finished. Total length: {coded.Length}.");
+
                 coded = CycleEncoder.TryCorrupt(coded);
+                await Console.Out.WriteLineAsync("> Corrupt Finished. ");
+
                 coded = CycleEncoder.Decode(coded);
-                //coded = CycleEncoder.TryHeal(coded);
+                await Console.Out.WriteLineAsync($"> Decode Finished. Total length: {coded.Length}.");
+                
+                await Console.Out.WriteLineAsync($"Equal Flag: {segment.Segment == coded}");
                 segment.Segment = coded;
             }
             catch (Exception ex)
@@ -51,8 +69,11 @@ namespace WebApi_KR.Controllers
             {
                 var jsonBody = JsonConvert.SerializeObject(segment);
 
-                //var client = new RestClient("http://127.0.0.1:8000/transfer");
-                var client = new RestClient("http://192.168.207.124:8000/transfer");
+                var host = "http://127.0.0.1:8000/transfer";
+                // var host = "http://192.168.207.124:8000/transfer";
+
+                await Console.Out.WriteLineAsync($"Calling {host}...");
+                var client = new RestClient(host);
                 var request = new RestRequest()
                 {
                     Method = Method.Post
@@ -61,8 +82,21 @@ namespace WebApi_KR.Controllers
                 request.AddBody(jsonBody);
 
                 var response = await client.ExecuteAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    await Console.Out.WriteLineAsync("Segment sent.");
+                }
+                else
+                {
+                    await Console.Out.WriteLineAsync($"Segment was not received by the host ({host}) ({response.Content ?? "No More Data"})");
+                }
                 return Ok(segment);
             }
+            else
+            {
+                await Console.Out.WriteLineAsync("Segment lost.");
+            }
+            await Console.Out.WriteLineAsync();
 
             return StatusCode(500, new { Message = "Internal Server Error" });
             //return Ok(new { Message = "Success" });

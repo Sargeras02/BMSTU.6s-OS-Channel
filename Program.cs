@@ -1,5 +1,5 @@
-
 using Microsoft.OpenApi.Models;
+using WebApi_KR.Helpers;
 
 namespace WebApi_KR
 {
@@ -7,6 +7,8 @@ namespace WebApi_KR
     {
         public static void Main(string[] args)
         {
+            HealHelper.PrintHealMeta();
+
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.

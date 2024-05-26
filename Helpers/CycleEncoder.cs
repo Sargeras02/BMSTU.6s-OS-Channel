@@ -16,6 +16,8 @@ namespace WebApi_KR.Helpers
         public const int LossChance = 2;
 
         // 929 = 1101
+        // 1111
+        // 19
         public static int GenerativePoly { get; set; } = 13;
         public static string GenerativeBits => PolyHelper.DecimalToBinary(GenerativePoly, BinarySize);
 
@@ -56,12 +58,17 @@ namespace WebApi_KR.Helpers
             var corrupted = segment;
             if (Random.Shared.Next(100) < CorruptionChance)
             {
+                Console.WriteLine($"Applying Noise...");
+
                 var temp = string.Empty;
 
                 var nr = new NormalRandom();
-                var randBit = nr.NextDouble() * 20 + 200; // Random.Shared.Next(segment.Length);
+                var randBit = (int)Math.Round(nr.NextDouble() * 20 + 200); // Random.Shared.Next(segment.Length);
+                Console.WriteLine($"Noise bit: {randBit}");
+
                 if (randBit > segment.Length - 1)
                     randBit = segment.Length - 1;
+                Console.WriteLine($"Noise bit check: {randBit}");
 
                 for (int i = 0; i < segment.Length; i++)
                     temp += i == randBit ? Invert(segment[i]) : segment[i];
@@ -75,25 +82,27 @@ namespace WebApi_KR.Helpers
             var decoded = string.Empty;
             var temp = string.Empty;
             var i = 0;
+            var iStart = 0;
             while (i < segment.Length)
             {
                 temp += segment[i];
                 i++;
                 if (temp.Length >= BinarySize || i == segment.Length)
                 {
-                    decoded += DecodePart(temp);
+                    decoded += DecodePart(iStart, temp);
                     temp = string.Empty;
+                    iStart = i;
                 }
             }
             return decoded;
         }
 
-        public static string DecodePart(string sequence)
+        public static string DecodePart(int iStart, string sequence)
         {
             PolyHelper.PolynomialDivision(sequence, GenerativeBits, out int[] quotient, out int[] remainder);
             if (remainder.Sum() != 0)
             {
-                sequence = HealPart(sequence);
+                sequence = HealPart(iStart, sequence);
             }
 
             var data = sequence[..BinaryBase];
@@ -115,23 +124,25 @@ namespace WebApi_KR.Helpers
                 i++;
                 if (temp.Length >= BinarySize || i == corrupted.Length)
                 {
-                    recovered += HealPart(temp);
+                    recovered += HealPart(i - 1 - BinarySize, temp);
                     temp = string.Empty;
                 }
             }
             return recovered;
         }
 
-        public static string HealPart(string sequence)
+        public static string HealPart(int iStart, string sequence)
         {
             PolyHelper.PolynomialDivision(sequence, GenerativeBits, out int[] quotient, out int[] remainder);
 
             var syndromeBinary = string.Concat(remainder);
             var errors = HealHelper.ErrorBySyndrome(syndromeBinary);
+            Console.WriteLine($"Syndromes: {errors.Count}.");
 
             var index = Random.Shared.Next(errors.Count);
 
             var corruptedIndex = errors[index].IndexOf('1');
+            Console.WriteLine($"Healing {iStart + corruptedIndex}.");
             var healed = string.Empty;
             for (int i = 0; i < sequence.Length; i++)
                 healed += i == corruptedIndex ? Invert(sequence[i]) : sequence[i];
